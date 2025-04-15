@@ -104,7 +104,7 @@ class PowerUp:
         self.tamanho = tamanho
         self.img_original = pygame.Surface((tamanho, tamanho), pygame.SRCALPHA)
         self.img_original.fill((0, 0, 0, 0))  # Transparente
-        
+        self.velocid = 2
         # Define o tipo de powerup
         self.tipo = random.choice(['vida', 'escudo', 'velocidade'])
         
@@ -163,6 +163,7 @@ class PowerUp:
         self.velocidade_x = random.uniform(-0.5, 0.5)  # Movimento suave para os lados
         self.amplitude_oscilacao = random.randint(10, 30)
         self.frequencia_oscilacao = random.uniform(0.02, 0.05)
+        self.velocidade_rotacao = 2
         self.tempo = 0
         
         # Partículas de brilho

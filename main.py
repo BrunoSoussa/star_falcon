@@ -190,8 +190,8 @@ def jogo_principal():
             if not inimigo.ativo:
                 explosoes.append(Explosao(inimigo.x + 20, inimigo.y + 20, 40))
                 jogador.pontuacao += 100
-                if jogador.pontuacao > 500:
-                    desenhar_texto(f'Pontuação: {jogador.pontuacao}', 48, largura//2 - 120, altura//2)
+                if jogador.pontuacao > 200:
+                    desenhar_texto('GAME OVER', 72, largura//2 - 180, altura//2 - 100)
                 inimigos.remove(inimigo)
                 if random.random() < 0.2:  # 20% de chance de gerar power-up
                     powerup = PowerUp()
@@ -314,6 +314,7 @@ def jogo_principal():
         
         # Desenha HUD
         desenhar_hud(jogador)
+        desenhar_texto(f'OOOOOOOOOOOOOOOOOOOOO: {jogador.vidas}', 24, 10, 10)
         
         # Atualiza a tela
         pygame.display.update()
