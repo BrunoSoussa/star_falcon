@@ -16,10 +16,12 @@ AZUL = (0, 0, 255)
 
 # Inicializar o Pygame
 pygame.init()
-mixer.init()
+mixer.init()    
 sound_dir = os.path.join(os.path.dirname(__file__), 'sounds')
-shoot_sound = mixer.Sound(os.path.join(sound_dir, 'shoot.wav'))
+shoot_sound = mixer.Sound(os.path.join(sound_dir, 'buster_tiro.wav'))
 explosion_sound = mixer.Sound(os.path.join(sound_dir, 'explosion.wav'))
+opening_sound = mixer.Sound(os.path.join(sound_dir, 'star_wars_tema.wav'))
+
 
 # Configuração da tela
 largura = 800
@@ -100,6 +102,7 @@ MENU = 0
 HISTORIA = 1
 JOGANDO = 2
 GAME_OVER = 3
+VITORIA = 4  # Novo estado para quando o jogador vence (derrota o boss)
 
 def tela_menu():
     tela.fill(PRETO)
@@ -237,6 +240,30 @@ def tela_game_over(pontuacao):
     
     pygame.display.update()
 
+
+def tela_vitoria(pontuacao):
+    tela.fill(PRETO)
+    # Desenha estrelas com efeito mais rápido para celebração
+    for estrela in estrelas:
+        cor_estrela = (estrela[5], estrela[5], estrela[5])  # Usar o valor do brilho para RGB
+        pygame.draw.circle(tela, cor_estrela, (estrela[0], estrela[1]), estrela[2])
+        # Move as estrelas mais rápido para efeito festivo
+        estrela[1] += estrela[3] * 2
+        if estrela[1] > altura:
+            estrela[1] = 0
+            estrela[0] = random.randint(0, largura)
+    
+    # Texto piscando para efeito de celebração
+    if pygame.time.get_ticks() % 1000 < 800:
+        desenhar_texto('VOCÊ VENCEU!', 72, largura//2 - 200, altura//2 - 150, (255, 215, 0))  # Cor dourada
+    
+    desenhar_texto('Missão Cumprida!', 48, largura//2 - 160, altura//2 - 50, (50, 255, 50))
+    desenhar_texto(f'Pontuação Final: {pontuacao}', 36, largura//2 - 140, altura//2 + 20)
+    desenhar_texto('A galáxia está segura novamente!', 30, largura//2 - 210, altura//2 + 70, (100, 200, 255))
+    desenhar_texto('Pressione ESPAÇO para voltar ao menu', 30, largura//2 - 220, altura//2 + 150)
+    
+    pygame.display.update()
+
 def jogo_principal():
     estado_jogo = MENU
     relogio = pygame.time.Clock()
@@ -301,9 +328,16 @@ def jogo_principal():
                         # Ao pressionar ESPAÇO no menu, vai para a tela de história
                         estado_jogo = HISTORIA
                 
-                elif estado_jogo == GAME_OVER:
+                elif estado_jogo == GAME_OVER or estado_jogo == VITORIA:
                     if evento.key == pygame.K_SPACE:
-                        estado_jogo = JOGANDO
+                        # Se estiver na tela de vitória, volta para o menu inicial
+                        # Se estiver na tela de game over, recomeça o jogo
+                        if estado_jogo == VITORIA:
+                            estado_jogo = MENU
+                        else:  # GAME_OVER
+                            estado_jogo = JOGANDO
+                            
+                        # Reinicia todos os objetos do jogo
                         jogador = Jogador()
                         tiros = []
                         inimigos = []
@@ -333,6 +367,7 @@ def jogo_principal():
         
         elif estado_jogo == HISTORIA:
             # Mostra a tela de história com animação estilo Star Wars
+            opening_sound.play()
             tela_historia()
             # Após a tela de história, passa para o estado de jogo
             estado_jogo = JOGANDO
@@ -340,12 +375,18 @@ def jogo_principal():
             
         elif estado_jogo == JOGANDO:
             # Atualiza posição das estrelas durante o jogo
+            opening_sound.stop()
             atualizar_estrelas()
         
         elif estado_jogo == GAME_OVER:
             # Atualiza posição das estrelas na tela de game over
             atualizar_estrelas()
             tela_game_over(jogador.pontuacao)
+            continue
+        
+        elif estado_jogo == VITORIA:
+            # A tela de vitória já tem seu próprio efeito de estrelas
+            tela_vitoria(jogador.pontuacao)
             continue
         
         # Obtém teclas pressionadas
@@ -537,9 +578,13 @@ def jogo_principal():
                         explosoes.append(Explosao(boss.x + boss.tamanho//2, 
                                                 boss.y + boss.tamanho//2, 80))
                         explosion_sound.play()
-                        # Cria power-ups extras quando o boss é derrotado
-                        powerups.append(PowerUp(boss.x + boss.tamanho//4, boss.y + boss.tamanho//4, 'vida'))
-                        powerups.append(PowerUp(boss.x + 3*boss.tamanho//4, boss.y + boss.tamanho//4, 'escudo'))
+                        
+                        # Aguarda um momento antes de ir para a tela de vitória
+                        # (para mostrar a explosão do boss)
+                        pygame.time.delay(1000)  # Pausa por 1 segundo
+                        
+                        # Muda para a tela de vitória
+                        estado_jogo = VITORIA
                     
                     explosoes.append(Explosao(tiro.x, tiro.y, 10))
                     if tiro in tiros:  # Verifica se o tiro ainda está na lista

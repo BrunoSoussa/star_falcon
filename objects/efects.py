@@ -101,15 +101,20 @@ class Explosao:
 
 
 class PowerUp:
-    def __init__(self):
+    def __init__(self, x=None, y=None, tipo=None):
         # Cria imagem base do powerup
         tamanho = 30
         self.tamanho = tamanho
         self.img_original = pygame.Surface((tamanho, tamanho), pygame.SRCALPHA)
         self.img_original.fill((0, 0, 0, 0))  # Transparente
         self.velocid = 2
+        
         # Define o tipo de powerup - apenas 'laser' (azul) e 'vida' (verde)
-        self.tipo = random.choice(['vida', 'laser'])
+        # Se o tipo não for passado, escolhe aleatoriamente
+        if tipo is None or tipo not in ['vida', 'laser']:
+            self.tipo = random.choice(['vida', 'laser'])
+        else:
+            self.tipo = tipo
         
         # Cria visual baseado no tipo
         if self.tipo == 'vida':
@@ -164,8 +169,15 @@ class PowerUp:
         self.img = pygame.transform.rotate(self.img_original, self.rotacao)
         
         # Configurações de movimento
-        self.x = random.randint(0, largura - tamanho)
-        self.y = -tamanho
+        if x is None:
+            self.x = random.randint(0, largura - tamanho)
+        else:
+            self.x = x
+            
+        if y is None:
+            self.y = -tamanho
+        else:
+            self.y = y
         self.velocidade_y = random.uniform(1, 2)
         self.velocidade_x = random.uniform(-0.5, 0.5)  # Movimento suave para os lados
         self.amplitude_oscilacao = random.randint(10, 30)
