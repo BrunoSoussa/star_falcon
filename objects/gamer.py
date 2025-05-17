@@ -40,6 +40,11 @@ class Jogador:
         self.pontuacao = 0
         self.imune = False
         self.tempo_imune = 0
+        
+        # Atributos para o tiro melhorado
+        self.tiro_melhorado = False
+        self.tempo_tiro_melhorado = 0
+        self.duracao_tiro_melhorado = 10000  # 10 segundos
 
     def desenhar(self):
         # Aplica rotação à imagem
@@ -102,6 +107,16 @@ class Jogador:
         if self.imune:
             if pygame.time.get_ticks() - self.tempo_imune > 2000:  # 2 segundos de imunidade
                 self.imune = False
+                
+        # Atualiza estado do tiro melhorado
+        if self.tiro_melhorado:
+            tempo_atual = pygame.time.get_ticks()
+            # Desenha um indicador visual de quanto tempo resta
+            tempo_restante = max(0, self.duracao_tiro_melhorado - (tempo_atual - self.tempo_tiro_melhorado))
+            
+            # Se o tempo acabou, volta ao tiro normal
+            if tempo_atual - self.tempo_tiro_melhorado > self.duracao_tiro_melhorado:
+                self.tiro_melhorado = False
 
     def colidir(self):
         if not self.imune:

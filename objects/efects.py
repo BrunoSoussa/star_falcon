@@ -35,7 +35,10 @@ class Explosao:
             b = min(255, random.randint(0, 50))
             cor = (r, g, b)
             
-            tamanho_particula = random.randint(3, tamanho // 4)
+            # Garantindo que o tamanho máximo seja pelo menos igual ao mínimo
+            tamanho_min = 2
+            tamanho_max = max(tamanho_min + 1, tamanho // 4)
+            tamanho_particula = random.randint(tamanho_min, tamanho_max)
             self.particulas.append({
                 'x': x, 'y': y,
                 'vx': vx, 'vy': vy,
@@ -105,37 +108,41 @@ class PowerUp:
         self.img_original = pygame.Surface((tamanho, tamanho), pygame.SRCALPHA)
         self.img_original.fill((0, 0, 0, 0))  # Transparente
         self.velocid = 2
-        # Define o tipo de powerup
-        self.tipo = random.choice(['vida', 'escudo', 'velocidade'])
+        # Define o tipo de powerup - apenas 'laser' (azul) e 'vida' (verde)
+        self.tipo = random.choice(['vida', 'laser'])
         
         # Cria visual baseado no tipo
         if self.tipo == 'vida':
-            # Cor de base e forma para vida (coração)
-            pygame.draw.circle(self.img_original, (220, 0, 0), (tamanho//2, tamanho//2), tamanho//2)
-            # Desenha um coração estilizado
-            pygame.draw.polygon(self.img_original, BRANCO, [
-                (tamanho//2, tamanho//5), 
-                (3*tamanho//4, tamanho//2), 
-                (tamanho//2, 4*tamanho//5), 
-                (tamanho//4, tamanho//2)
-            ])
-        elif self.tipo == 'escudo':
-            # Cor de base e forma para escudo
-            pygame.draw.circle(self.img_original, AZUL, (tamanho//2, tamanho//2), tamanho//2)
-            # Desenha um símbolo de escudo
-            pygame.draw.circle(self.img_original, (100, 150, 255), (tamanho//2, tamanho//2), tamanho//3)
-            pygame.draw.rect(self.img_original, (180, 220, 255), (tamanho//3, tamanho//3, tamanho//3, tamanho//3))
-        else:  # Velocidade
-            # Cor de base e forma para velocidade
+            # Cor de base verde para vida
             pygame.draw.circle(self.img_original, VERDE, (tamanho//2, tamanho//2), tamanho//2)
-            # Desenha um símbolo de velocidade (raio)
-            pontos = [
-                (tamanho//2, tamanho//6),
-                (tamanho//2 + tamanho//10, tamanho//2),
-                (tamanho//2 - tamanho//4, tamanho//2),
-                (tamanho//2, 5*tamanho//6)
+            # Desenha um símbolo de cruz de vida
+            largura_cruz = tamanho//3
+            altura_cruz = tamanho//3
+            pygame.draw.rect(self.img_original, BRANCO, 
+                           (tamanho//2 - largura_cruz//6, tamanho//2 - altura_cruz//2, 
+                            largura_cruz//3, altura_cruz))
+            pygame.draw.rect(self.img_original, BRANCO, 
+                           (tamanho//2 - largura_cruz//2, tamanho//2 - altura_cruz//6, 
+                            largura_cruz, altura_cruz//3))
+        else:  # Laser (azul)
+            # Cor de base azul para laser
+            pygame.draw.circle(self.img_original, AZUL, (tamanho//2, tamanho//2), tamanho//2)
+            # Desenha um símbolo de raio laser
+            pygame.draw.rect(self.img_original, (150, 200, 255), 
+                           (tamanho//3, tamanho//4, tamanho//3, tamanho//2))
+            # Desenha dois raios divergentes
+            pontos1 = [
+                (tamanho//3, tamanho//4),
+                (tamanho//6, tamanho//8),
+                (tamanho//3, tamanho//2)
             ]
-            pygame.draw.polygon(self.img_original, (255, 255, 0), pontos)
+            pontos2 = [
+                (2*tamanho//3, tamanho//4),
+                (5*tamanho//6, tamanho//8),
+                (2*tamanho//3, tamanho//2)
+            ]
+            pygame.draw.polygon(self.img_original, (200, 230, 255), pontos1)
+            pygame.draw.polygon(self.img_original, (200, 230, 255), pontos2)
         
         # Adiciona brilho/glow
         for i in range(3):
@@ -173,11 +180,9 @@ class PowerUp:
 
     def cor_por_tipo(self):
         if self.tipo == 'vida':
-            return (220, 0, 0)
-        elif self.tipo == 'escudo':
-            return (0, 100, 220)
-        else:  # velocidade
-            return (0, 220, 0)
+            return (0, 220, 0)  # Verde
+        else:  # laser
+            return (0, 100, 220)  # Azul
     
     def desenhar(self):
         # Desenha as partículas de brilho
@@ -261,15 +266,32 @@ class PowerUp:
 
 
 class Tiro:
-    def __init__(self, x, y, rotacao=0):
+    def __init__(self, x, y, rotacao=0, melhorado=False):
         # Cria imagem original do tiro
-        self.largura = 5
-        self.altura = 20
+        self.melhorado = melhorado
+        
+        if melhorado:
+            self.largura = 10  # Tiro mais largo
+            self.altura = 30  # Tiro mais longo
+        else:
+            self.largura = 5
+            self.altura = 20
+            
         self.img_original = pygame.Surface((self.largura, self.altura))
         self.img_original.fill(PRETO)
+        
         # Desenha um laser mais interessante
-        pygame.draw.rect(self.img_original, AZUL, (0, 0, self.largura, self.altura))
-        pygame.draw.rect(self.img_original, (100, 200, 255), (1, 1, self.largura-2, self.altura-2))
+        if melhorado:
+            # Tiro azul mais brilhante e com efeito de pulsação
+            pygame.draw.rect(self.img_original, (50, 100, 255), (0, 0, self.largura, self.altura))
+            pygame.draw.rect(self.img_original, (150, 220, 255), (2, 2, self.largura-4, self.altura-4))
+            # Adiciona efeito de brilho no centro
+            pygame.draw.rect(self.img_original, (200, 230, 255), (self.largura//2-1, 0, 2, self.altura))
+        else:
+            # Tiro padrão
+            pygame.draw.rect(self.img_original, AZUL, (0, 0, self.largura, self.altura))
+            pygame.draw.rect(self.img_original, (100, 200, 255), (1, 1, self.largura-2, self.altura-2))
+            
         self.img_original.set_colorkey(PRETO)
         
         # Aplica rotação inicial baseada na rotação da nave
