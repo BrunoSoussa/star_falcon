@@ -13,22 +13,33 @@ VERDE = (0, 255, 0)
 AZUL = (0, 0, 255)
 class Jogador:
     def __init__(self):
-        # Base da nave
-        tamanho_base = 50
-        self.tamanho_original = tamanho_base
-        self.img_original = pygame.Surface((tamanho_base, 30))
-        self.img_original.fill(VERDE)
-        # Desenha uma nave triangular
-        pygame.draw.polygon(self.img_original, BRANCO, [(0, 30), (tamanho_base//2, 0), (tamanho_base, 30)])
-        # Adiciona detalhes à nave
-        pygame.draw.polygon(self.img_original, AZUL, [(10, 30), (tamanho_base//2, 10), (tamanho_base-10, 30)])
-        pygame.draw.rect(self.img_original, VERMELHO, (tamanho_base//2-2, 15, 4, 15))
-        self.img_original.set_colorkey(VERDE)  # Torna o verde transparente
+        # Define o tamanho base padrão
+        tamanho_base = 80  # Tamanho base para a nave (usado no fallback)
+        
+        # Carrega a imagem da nave
+        try:
+            self.img_original = pygame.image.load('img/nave.png').convert_alpha()
+            # Redimensiona a imagem para um tamanho adequado
+            self.img_original = pygame.transform.scale(self.img_original, (tamanho_base, tamanho_base))
+            # Rotaciona a imagem em 180 graus para corrigir a orientação
+            self.img_original = pygame.transform.rotate(self.img_original, 180)
+            self.tamanho_original = self.img_original.get_width()
+        except Exception as e:
+            # Se não conseguir carregar a imagem, usa um retângulo como fallback
+            print(f"Erro ao carregar a imagem da nave: {e}. Usando forma geométrica como fallback.")
+            self.tamanho_original = tamanho_base
+            self.img_original = pygame.Surface((tamanho_base, 30), pygame.SRCALPHA)
+            # Desenha uma nave triangular
+            pygame.draw.polygon(self.img_original, BRANCO, [(0, 30), (tamanho_base//2, 0), (tamanho_base, 30)])
+            # Adiciona detalhes à nave
+            pygame.draw.polygon(self.img_original, AZUL, [(10, 30), (tamanho_base//2, 10), (tamanho_base-10, 30)])
+            pygame.draw.rect(self.img_original, VERMELHO, (tamanho_base//2-2, 15, 4, 15))
         
         self.img = self.img_original.copy()
         self.rect = self.img.get_rect()
-        self.x = largura // 2 - tamanho_base//2
-        self.y = altura - 100
+        # Centraliza a nave na tela horizontalmente e posiciona um pouco acima da parte inferior
+        self.x = (largura - self.tamanho_original) // 2
+        self.y = altura - 150  # Posiciona 150 pixels acima da parte inferior
         self.rotacao = 0
         self.rotacao_alvo = 0
         self.velocidade = 5

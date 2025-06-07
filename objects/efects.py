@@ -311,7 +311,7 @@ class Tiro:
         self.img = pygame.transform.rotate(self.img_original, self.rotacao)
         
         # Posição inicial ajustada para sair da ponta da nave
-        self.x = x + 23  # Centraliza com a nave
+        self.x = x + 37  # Centraliza com a nave
         self.y = y
         
         # Ajusta velocidade baseada na rotação (para seguir a direção da nave)

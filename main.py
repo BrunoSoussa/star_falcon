@@ -4,7 +4,7 @@ import math
 import os
 from pygame import mixer
 from objects.efects import Explosao, PowerUp, Tiro
-from objects.enemys import Asteroide, Inimigo, Boss, Projetil
+from objects.enemys import Asteroide, Inimigo, Boss
 from objects.gamer import Jogador
 import pygame.freetype
 
@@ -273,6 +273,7 @@ def jogo_principal():
     inimigos = []
     asteroides = []
     tiros = []
+    inimigos_projeteis = []  # Lista para armazenar projéteis dos inimigos
     explosoes = []
     powerups = []
     
@@ -422,15 +423,28 @@ def jogo_principal():
                 shoot_sound.play()
                 tempo_ultimo_tiro = tempo_atual
         
-        # Atualiza tiros
+        # Atualiza tiros do jogador
         for tiro in tiros[:]:
             tiro.atualizar()
             if not tiro.ativo:
                 tiros.remove(tiro)
+                
+        # Atualiza projéteis dos inimigos
+        for projetil in inimigos_projeteis[:]:
+            projetil.atualizar()
+            if not projetil.ativo:
+                inimigos_projeteis.remove(projetil)
         
-        # Atualiza inimigos
+        # Atualiza inimigos e verifica disparos
         for inimigo in inimigos[:]:
-            inimigo.atualizar()
+            inimigo.atualizar(jogador.x + jogador.tamanho_original//2, jogador.y + jogador.tamanho_original//2)
+            
+            # Verifica se o inimigo deve atirar (apenas tipo 1 - vermelho)
+            if inimigo.tipo == 1 and inimigo.pode_atirar(jogador.x + jogador.tamanho_original//2, jogador.y + jogador.tamanho_original//2):
+                projetil = inimigo.disparar(jogador.x + jogador.tamanho_original//2, jogador.y + jogador.tamanho_original//2)
+                if projetil:
+                    inimigos_projeteis.append(projetil)
+            
             if not inimigo.ativo:
                 explosoes.append(Explosao(inimigo.x + 20, inimigo.y + 20, 40))
                 explosion_sound.play()
@@ -438,7 +452,7 @@ def jogo_principal():
                 if jogador.pontuacao > 200:
                     desenhar_texto('GAME OVER', 72, largura//2 - 180, altura//2 - 100)
                 inimigos.remove(inimigo)
-                if random.random() < 0.2:  # 20% de chance de gerar power-up
+                if random.random() < 0.9:  # 20% de chance de gerar power-up
                     powerup = PowerUp()
                     powerup.x = inimigo.x
                     powerup.y = inimigo.y
@@ -486,12 +500,23 @@ def jogo_principal():
                         tiros.remove(tiro)
                     break
         
-        # Verifica colisões jogador-inimigo
+        # Verifica colisões jogador-inimigo e jogador-projétil
         for inimigo in inimigos[:]:
             if verificar_colisao(jogador.x + 25, jogador.y + 15, 15, inimigo.x + 20, inimigo.y + 20, 20):
                 jogador.colidir()
                 inimigo.ativo = False
                 explosoes.append(Explosao(inimigo.x + 20, inimigo.y + 20, 40))
+                explosion_sound.play()
+                
+        # Verifica colisões entre jogador e projéteis dos inimigos
+        for projetil in inimigos_projeteis[:]:
+            if verificar_colisao(jogador.x + 25, jogador.y + 15, 15, 
+                               projetil.x + projetil.tamanho//2, 
+                               projetil.y + projetil.tamanho//2, 
+                               projetil.raio):
+                jogador.colidir()
+                projetil.ativo = False
+                explosoes.append(Explosao(projetil.x, projetil.y, 30))
                 explosion_sound.play()
         
         # Verifica colisões jogador-asteroide
@@ -606,9 +631,13 @@ def jogo_principal():
                 estrela[1] = 0
                 estrela[0] = random.randint(0, largura)
         
-        # Desenha objetos
+        # Desenha tiros do jogador
         for tiro in tiros:
             tiro.desenhar()
+            
+        # Desenha projéteis dos inimigos
+        for projetil in inimigos_projeteis:
+            projetil.desenhar()
             
         for inimigo in inimigos:
             inimigo.desenhar()

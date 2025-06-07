@@ -17,6 +17,11 @@ class Inimigo:
         self.img_original = pygame.Surface((tamanho, tamanho))
         self.img_original.fill(PRETO)
         
+        # Controle de disparo para inimigos que atiram (tipo 1)
+        self.ultimo_disparo = 0
+        self.intervalo_disparo = 2000  # 2 segundos entre disparos
+        self.raio_visao = 300  # Distância em que o jogador é detectado
+        
         # Define o tipo de inimigo (visual diferente)
         self.tipo = random.randint(1, 3)
         if self.tipo == 1:  # Inimigo circular
@@ -79,7 +84,19 @@ class Inimigo:
         else:
             tela.blit(img_rotacionada, rect.topleft)
 
-    def atualizar(self):
+    def pode_atirar(self, jogador_x, jogador_y):
+        # Todos os inimigos tipo 1 podem atirar, independentemente da distância
+        return self.tipo == 1  # Apenas inimigos tipo 1 atiram
+    
+    def disparar(self, jogador_x, jogador_y):
+        # Retorna um projétil se for hora de atirar
+        tempo_atual = pygame.time.get_ticks()
+        if tempo_atual - self.ultimo_disparo > self.intervalo_disparo:
+            self.ultimo_disparo = tempo_atual
+            return Projetil(self.x + self.tamanho//2, self.y + self.tamanho, jogador_x, jogador_y)
+        return None
+    
+    def atualizar(self, jogador_x=None, jogador_y=None):
         # Atualiza rotação
         self.rotacao += self.velocidade_rotacao
         if self.rotacao >= 360:
@@ -148,30 +165,48 @@ class Inimigo:
 
 class Asteroide:
     def __init__(self):
-        tamanho = random.randint(20, 60)
-        self.img = pygame.Surface((tamanho, tamanho))
-        self.img.fill(PRETO)
-        pygame.draw.circle(self.img, (150, 150, 150), (tamanho//2, tamanho//2), tamanho//2)
-        # Adiciona crateras
-        for _ in range(5):
-            pos_x = random.randint(5, tamanho-5)
-            pos_y = random.randint(5, tamanho-5)
-            raio = random.randint(2, 5)
-            pygame.draw.circle(self.img, (100, 100, 100), (pos_x, pos_y), raio)
+        # Carrega as imagens dos asteroides uma vez (se ainda não foram carregadas)
+        if not hasattr(Asteroide, 'imagens'):
+            Asteroide.imagens = []
+            for i in range(1, 5):
+                try:
+                    # Tenta carregar as imagens na ordem asteroid1.png, asteroid2.png, etc.
+                    img_path = f'img/asteroids/asteroid{i}.png' if i < 4 else 'img/asteroids/asteroide1.png'
+                    img = pygame.image.load(img_path).convert_alpha()
+                    Asteroide.imagens.append(img)
+                except:
+                    # Se não conseguir carregar a imagem, cria uma superfície de fallback
+                    img = pygame.Surface((50, 50), pygame.SRCALPHA)
+                    pygame.draw.circle(img, (150, 150, 150), (25, 25), 25)
+                    pygame.draw.circle(img, (100, 100, 100), (15, 15), 5)
+                    pygame.draw.circle(img, (100, 100, 100), (35, 20), 3)
+                    pygame.draw.circle(img, (100, 100, 100), (25, 35), 4)
+                    Asteroide.imagens.append(img)
         
-        self.tamanho = tamanho
-        self.x = random.randint(0, largura - tamanho)
-        self.y = random.randint(-300, -tamanho)
+        # Escolhe uma imagem aleatória
+        self.img_original = random.choice(Asteroide.imagens)
+        
+        # Define tamanho aleatório e redimensiona a imagem
+        self.tamanho = random.randint(30, 80)
+        self.img_original = pygame.transform.scale(self.img_original, 
+                                                (self.tamanho, self.tamanho))
+        
+        # Define posição e velocidade
+        self.x = random.randint(0, largura - self.tamanho)
+        self.y = random.randint(-300, -self.tamanho)
         self.velocidade_x = random.choice([-1, 1]) * random.uniform(0.2, 1.0)
         self.velocidade_y = random.uniform(2, 4)
         self.rotacao = 0
         self.velocidade_rotacao = random.choice([-1, 1]) * random.uniform(0.5, 3)
         self.ativo = True
-        self.raio = tamanho // 2
+        self.raio = self.tamanho // 2
 
     def desenhar(self):
-        rotated = pygame.transform.rotate(self.img, self.rotacao)
-        rect = rotated.get_rect(center=(self.x + self.tamanho//2, self.y + self.tamanho//2))
+        # Aplica rotação na imagem original para evitar perda de qualidade
+        rotated = pygame.transform.rotate(self.img_original, self.rotacao)
+        # Obtém o retângulo da imagem rotacionada e centraliza
+        rect = rotated.get_rect(center=(self.x + self.tamanho//2, 
+                                      self.y + self.tamanho//2))
         tela.blit(rotated, rect.topleft)
 
     def atualizar(self):
@@ -194,11 +229,15 @@ class Asteroide:
 
 class Projetil:
     def __init__(self, x, y, alvo_x, alvo_y):
-        self.tamanho = 15
-        self.img = pygame.Surface((self.tamanho, self.tamanho))
-        self.img.fill(PRETO)
-        pygame.draw.circle(self.img, (255, 50, 50), (self.tamanho//2, self.tamanho//2), self.tamanho//2)
-        pygame.draw.circle(self.img, (255, 150, 0), (self.tamanho//2, self.tamanho//2), self.tamanho//4)
+        self.tamanho = 20  # Aumentando o tamanho para melhor visibilidade
+        self.img = pygame.Surface((self.tamanho, self.tamanho), pygame.SRCALPHA)  # Superfície com transparência
+        
+        # Desenha um círculo vermelho com borda laranja
+        pygame.draw.circle(self.img, (255, 100, 0), (self.tamanho//2, self.tamanho//2), self.tamanho//2)
+        pygame.draw.circle(self.img, (255, 200, 0), (self.tamanho//2, self.tamanho//2), self.tamanho//2, 2)
+        
+        # Adiciona um brilho no centro
+        pygame.draw.circle(self.img, (255, 255, 200), (self.tamanho//2, self.tamanho//2), self.tamanho//4)
         
         self.x = x
         self.y = y
