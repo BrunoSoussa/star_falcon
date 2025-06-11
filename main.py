@@ -351,16 +351,23 @@ def tela_vitoria(pontuacao):
                 return MENU
                 
             if evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_RETURN and nome.strip() != "":
-                    # Salva a pontuação e vai para o ranking
-                    salvar_pontuacao(nome, pontuacao)
-                    return RANKING
-                elif evento.key == pygame.K_ESCAPE:
-                    # Volta ao menu sem salvar se o nome estiver vazio
-                    if nome.strip() == "":
+                if evento.key == pygame.K_RETURN:
+                    if nome.strip() != "":
+                        # Salva a pontuação e vai para o ranking
+                        salvar_pontuacao(nome, pontuacao)
+                        return RANKING
+                    else:
+                        # Se não tiver nome, volta ao menu sem salvar
                         return MENU
-                    # Se tiver nome, salva e vai para o menu
-                    salvar_pontuacao(nome, pontuacao)
+                elif evento.key == pygame.K_SPACE:
+                    # Pressionou espaço para jogar novamente
+                    if nome.strip() != "":
+                        salvar_pontuacao(nome, pontuacao)
+                    return JOGANDO
+                elif evento.key == pygame.K_ESCAPE:
+                    # Volta ao menu
+                    if nome.strip() != "":
+                        salvar_pontuacao(nome, pontuacao)
                     return MENU
                 elif evento.key == pygame.K_BACKSPACE:
                     nome = nome[:-1]
@@ -401,8 +408,12 @@ def tela_vitoria(pontuacao):
         desenhar_texto(texto_nome, 30, largura//2 - 140, 355, BRANCO)
         
         # Instruções
-        desenhar_texto('Pressione ENTER para salvar e ver o ranking', 24, largura//2 - 220, 420, (200, 200, 200))
-        desenhar_texto('ESC para voltar ao menu', 24, largura//2 - 120, 450, (200, 200, 200))
+        if nome.strip() == "":
+            desenhar_texto('Digite seu nome para salvar sua pontuação', 24, largura//2 - 200, 420, (200, 200, 255))
+        else:
+            desenhar_texto('Pressione ENTER para ver o ranking', 24, largura//2 - 180, 420, (200, 255, 200))
+        desenhar_texto('ESPACO para jogar novamente', 24, largura//2 - 180, 450, (200, 200, 255))
+        desenhar_texto('ESC para voltar ao menu', 24, largura//2 - 140, 480, (255, 200, 200))
         
         pygame.display.update()
         relogio.tick(60)
@@ -525,22 +536,27 @@ def jogo_principal():
         if estado_jogo == VITORIA:
             # Exibe a tela de vitória e aguarda o jogador salvar seu nome
             resultado = tela_vitoria(pontuacao_final)
+            
+            # Reinicia o jogo completamente
+            jogador = Jogador()
+            inimigos = [Inimigo() for _ in range(5)]
+            asteroides = [Asteroide() for _ in range(3)]
+            tiros = []
+            inimigos_projeteis = []
+            explosoes = []
+            powerups = []
+            boss = None
+            boss_projeteis = []
+            boss_derrotado = False
+            pontuacao_final = 0
+            tempo_ultimo_tiro = 0
+            
             if resultado == RANKING:
                 estado_jogo = RANKING
+            elif resultado == JOGANDO:
+                estado_jogo = JOGANDO
+                
             else:
-                # Reinicia o jogo para o menu principal
-                jogador = Jogador()
-                inimigos = [Inimigo() for _ in range(5)]
-                asteroides = [Asteroide() for _ in range(3)]
-                tiros = []
-                inimigos_projeteis = []
-                explosoes = []
-                powerups = []
-                boss = None
-                boss_projeteis = []
-                boss_derrotado = False
-                pontuacao_final = 0
-                tempo_ultimo_tiro = 0
                 estado_jogo = MENU
             continue
             
@@ -659,7 +675,7 @@ def jogo_principal():
                 if jogador.pontuacao > 200:
                     desenhar_texto('GAME OVER', 72, largura//2 - 180, altura//2 - 100)
                 inimigos.remove(inimigo)
-                if random.random() < 0.9:  # 20% de chance de gerar power-up
+                if random.random() < 0.5: 
                     powerup = PowerUp()
                     powerup.x = inimigo.x
                     powerup.y = inimigo.y
