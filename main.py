@@ -524,8 +524,11 @@ def jogo_principal():
                 if estado_jogo == MENU:
                     if evento.key == pygame.K_SPACE:
                         # Ao pressionar ESPAÇO no menu, vai para a tela de história
+                        # Reseta o jogador para garantir que comece com 3 vidas
+                        jogador = Jogador()
                         estado_jogo = HISTORIA
                     if evento.key == pygame.K_r:
+                        # Salva o estado atual antes de ir para o ranking
                         estado_jogo = RANKING
                 
                 # O estado GAME_OVER é tratado na verificação principal de estados do jogo
@@ -607,10 +610,23 @@ def jogo_principal():
             continue
             
         elif estado_jogo == RANKING:
-            # Exibe a tela de ranking e aguarda o jogador voltar
-            resultado = tela_ranking()
-            if resultado is not None:
-                estado_jogo = resultado
+            # Mostra a tela de ranking
+            tela_ranking()
+            # Sempre volta para o menu após o ranking
+            estado_jogo = MENU
+            # Reseta o jogo para um estado limpo
+            jogador = Jogador()
+            inimigos = [Inimigo() for _ in range(5)]
+            asteroides = [Asteroide() for _ in range(3)]
+            tiros = []
+            inimigos_projeteis = []
+            explosoes = []
+            powerups = []
+            boss = None
+            boss_projeteis = []
+            boss_derrotado = False
+            pontuacao_final = 0
+            tempo_ultimo_tiro = 0
             continue
         
         # Obtém teclas pressionadas
