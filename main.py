@@ -13,6 +13,7 @@ BRANCO = (255, 255, 255)
 VERMELHO = (255, 0, 0)
 VERDE = (0, 255, 0)
 AZUL = (0, 0, 255)
+AMARELO = (255, 255, 0)
 
 # Inicializar o Pygame
 pygame.init()
@@ -103,6 +104,38 @@ HISTORIA = 1
 JOGANDO = 2
 GAME_OVER = 3
 VITORIA = 4  # Novo estado para quando o jogador vence (derrota o boss)
+RANKING = 5  # Estado para mostrar o ranking
+
+# Funções para gerenciar o ranking
+def salvar_pontuacao(nome, pontuacao):
+    """Salva a pontuação no arquivo de ranking"""
+    try:
+        with open('ranking.txt', 'a', encoding='utf-8') as arquivo:
+            arquivo.write(f"{nome}:{pontuacao}\n")
+    except Exception as e:
+        print(f"Erro ao salvar pontuação: {e}")
+
+def carregar_ranking():
+    """Carrega as pontuações do arquivo de ranking"""
+    try:
+        with open('ranking.txt', 'r', encoding='utf-8') as arquivo:
+            linhas = arquivo.readlines()
+        ranking = []
+        for linha in linhas:
+            if ':' in linha:
+                nome, pontos = linha.strip().split(':', 1)
+                try:
+                    ranking.append((nome, int(pontos)))
+                except ValueError:
+                    continue
+        # Ordena por pontuação (maior primeiro)
+        ranking.sort(key=lambda x: x[1], reverse=True)
+        return ranking[:10]  # Retorna apenas os 10 melhores
+    except FileNotFoundError:
+        return []
+    except Exception as e:
+        print(f"Erro ao carregar ranking: {e}")
+        return []
 
 def tela_menu():
     tela.fill(PRETO)
@@ -111,10 +144,19 @@ def tela_menu():
         cor_estrela = (estrela[5], estrela[5], estrela[5])  # Usar o valor do brilho para RGB
         pygame.draw.circle(tela, cor_estrela, (estrela[0], estrela[1]), estrela[2])
     
-    desenhar_texto('STAR FALCON', 72, largura//2 - 180, altura//2 - 100)
-    desenhar_texto('Pressione ESPAÇO para jogar', 36, largura//2 - 180, altura//2)
-    desenhar_texto('Setas para mover, ESPAÇO para atirar', 24, largura//2 - 180, altura//2 + 50)
-    desenhar_texto('ESC para sair', 24, largura//2 - 180, altura//2 + 80)
+    desenhar_texto('STAR FALCON', 72, largura//2 - 180, altura//2 - 200)
+    desenhar_texto('Pressione ESPAÇO para jogar', 36, largura//2 - 180, altura//2 - 100)
+    desenhar_texto('Setas para mover, ESPAÇO para atirar', 24, largura//2 - 180, altura//2 - 50)
+    desenhar_texto('Pressione R para ver o ranking completo', 24, largura//2 - 180, altura//2 - 20)
+    desenhar_texto('ESC para sair', 24, largura//2 - 180, altura//2 + 10)
+    
+    # Exibe o ranking das 5 melhores pontuações
+    ranking = carregar_ranking()
+    if ranking:
+        desenhar_texto('TOP 5 PONTUAÇÕES', 32, largura//2 - 100, altura//2 + 60, AMARELO)
+        for i, (nome, pontos) in enumerate(ranking[:5], 1):
+            texto = f"{i}. {nome}: {pontos}"
+            desenhar_texto(texto, 24, largura//2 - 80, altura//2 + 90 + (i * 30), BRANCO)
     
     pygame.display.update()
 
@@ -227,42 +269,189 @@ def tela_historia():
 
 
 def tela_game_over(pontuacao):
-    tela.fill(PRETO)
-    # Desenha estrelas
-    for estrela in estrelas:
-        cor_estrela = (estrela[5], estrela[5], estrela[5])  # Usar o valor do brilho para RGB
-        pygame.draw.circle(tela, cor_estrela, (estrela[0], estrela[1]), estrela[2])
+    nome = ""
+    input_visivel = True
+    relogio = pygame.time.Clock()
     
-    desenhar_texto('GAME OVER', 72, largura//2 - 180, altura//2 - 100)
-    desenhar_texto(f'Pontuação: {pontuacao}', 48, largura//2 - 120, altura//2)
-    desenhar_texto('Pressione ESPAÇO para jogar novamente', 30, largura//2 - 240, altura//2 + 80)
-    desenhar_texto('ESC para sair', 24, largura//2 - 80, altura//2 + 120)
-    
-    pygame.display.update()
+    while True:
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                return MENU
+                
+            if evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_RETURN and nome.strip() != "":
+                    # Salva a pontuação e reinicia o jogo
+                    salvar_pontuacao(nome, pontuacao)
+                    return JOGANDO  # Retorna para o jogo
+                elif evento.key == pygame.K_r:  # Tecla R para ver o ranking
+                    if nome.strip() != "":
+                        salvar_pontuacao(nome, pontuacao)
+                    return RANKING
+                elif evento.key == pygame.K_ESCAPE:  # ESC para voltar ao menu
+                    if nome.strip() != "":
+                        salvar_pontuacao(nome, pontuacao)
+                    return MENU
+                elif evento.key == pygame.K_BACKSPACE:
+                    nome = nome[:-1]
+                elif len(nome) < 15 and evento.unicode.isprintable():
+                    nome += evento.unicode
+        
+        # Desenha o fundo
+        tela.fill(PRETO)
+        
+        # Desenha estrelas
+        for estrela in estrelas:
+            cor_estrela = (estrela[5], estrela[5], estrela[5])
+            pygame.draw.circle(tela, cor_estrela, (estrela[0], estrela[1]), estrela[2])
+            estrela[1] += estrela[3] * 2  # Movimento mais rápido para o game over
+            if estrela[1] > altura:
+                estrela[1] = 0
+                estrela[0] = random.randint(0, largura)
+        
+        # Texto de game over
+        if pygame.time.get_ticks() % 1000 < 800:  # Pisca o texto
+            desenhar_texto('GAME OVER', 72, largura//2 - 180, 100, (255, 50, 50))
+        
+        desenhar_texto('Fim de Jogo', 48, largura//2 - 120, 180, (200, 200, 200))
+        desenhar_texto(f'Pontuação: {pontuacao}', 36, largura//2 - 100, 250, BRANCO)
+        
+        # Campo para digitar o nome
+        desenhar_texto('Digite seu nome e pressione:', 30, largura//2 - 180, 320, BRANCO)
+        
+        # Caixa de texto
+        pygame.draw.rect(tela, BRANCO, (largura//2 - 150, 350, 300, 40), 2)
+        
+        # Cursor piscante
+        if pygame.time.get_ticks() % 1000 < 500:  # Pisca a cada 500ms
+            texto_nome = nome + "_"
+        else:
+            texto_nome = nome
+            
+        desenhar_texto(texto_nome, 30, largura//2 - 140, 355, BRANCO)
+        
+        # Instruções
+        desenhar_texto('ENTER para jogar novamente', 28, largura//2 - 180, 420, (200, 255, 200))
+        desenhar_texto('R para ver o ranking', 28, largura//2 - 150, 460, (200, 200, 255))
+        desenhar_texto('ESC para voltar ao menu', 28, largura//2 - 160, 500, (255, 200, 200))
+        
+        pygame.display.update()
+        relogio.tick(60)
 
 
 def tela_vitoria(pontuacao):
-    tela.fill(PRETO)
-    # Desenha estrelas com efeito mais rápido para celebração
-    for estrela in estrelas:
-        cor_estrela = (estrela[5], estrela[5], estrela[5])  # Usar o valor do brilho para RGB
-        pygame.draw.circle(tela, cor_estrela, (estrela[0], estrela[1]), estrela[2])
-        # Move as estrelas mais rápido para efeito festivo
-        estrela[1] += estrela[3] * 2
-        if estrela[1] > altura:
-            estrela[1] = 0
-            estrela[0] = random.randint(0, largura)
+    nome = ""
+    input_visivel = True
+    relogio = pygame.time.Clock()
     
-    # Texto piscando para efeito de celebração
-    if pygame.time.get_ticks() % 1000 < 800:
-        desenhar_texto('VOCÊ VENCEU!', 72, largura//2 - 200, altura//2 - 150, (255, 215, 0))  # Cor dourada
+    while True:
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                return MENU
+                
+            if evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_RETURN and nome.strip() != "":
+                    # Salva a pontuação e vai para o ranking
+                    salvar_pontuacao(nome, pontuacao)
+                    return RANKING
+                elif evento.key == pygame.K_ESCAPE:
+                    # Volta ao menu sem salvar se o nome estiver vazio
+                    if nome.strip() == "":
+                        return MENU
+                    # Se tiver nome, salva e vai para o menu
+                    salvar_pontuacao(nome, pontuacao)
+                    return MENU
+                elif evento.key == pygame.K_BACKSPACE:
+                    nome = nome[:-1]
+                elif len(nome) < 15 and evento.unicode.isprintable():
+                    nome += evento.unicode
+        
+        # Desenha o fundo
+        tela.fill(PRETO)
+        
+        # Desenha estrelas com efeito mais rápido para celebração
+        for estrela in estrelas:
+            cor_estrela = (estrela[5], estrela[5], estrela[5])
+            pygame.draw.circle(tela, cor_estrela, (estrela[0], estrela[1]), estrela[2])
+            estrela[1] += estrela[3] * 2
+            if estrela[1] > altura:
+                estrela[1] = 0
+                estrela[0] = random.randint(0, largura)
+        
+        # Texto de vitória
+        if pygame.time.get_ticks() % 1000 < 800:  # Pisca o texto
+            desenhar_texto('VOCÊ VENCEU!', 72, largura//2 - 200, 100, (255, 215, 0))
+        
+        desenhar_texto('Missão Cumprida!', 48, largura//2 - 160, 180, (50, 255, 50))
+        desenhar_texto(f'Pontuação Final: {pontuacao}', 36, largura//2 - 140, 250, BRANCO)
+        
+        # Campo para digitar o nome
+        desenhar_texto('Digite seu nome:', 30, largura//2 - 120, 320, BRANCO)
+        
+        # Caixa de texto
+        pygame.draw.rect(tela, BRANCO, (largura//2 - 150, 350, 300, 40), 2)
+        
+        # Cursor piscante
+        if pygame.time.get_ticks() % 1000 < 500:  # Pisca a cada 500ms
+            texto_nome = nome + "_"
+        else:
+            texto_nome = nome
+            
+        desenhar_texto(texto_nome, 30, largura//2 - 140, 355, BRANCO)
+        
+        # Instruções
+        desenhar_texto('Pressione ENTER para salvar e ver o ranking', 24, largura//2 - 220, 420, (200, 200, 200))
+        desenhar_texto('ESC para voltar ao menu', 24, largura//2 - 120, 450, (200, 200, 200))
+        
+        pygame.display.update()
+        relogio.tick(60)
+
+def tela_ranking():
+    ranking = carregar_ranking()
+    voltar = False
+    relogio = pygame.time.Clock()
     
-    desenhar_texto('Missão Cumprida!', 48, largura//2 - 160, altura//2 - 50, (50, 255, 50))
-    desenhar_texto(f'Pontuação Final: {pontuacao}', 36, largura//2 - 140, altura//2 + 20)
-    desenhar_texto('A galáxia está segura novamente!', 30, largura//2 - 210, altura//2 + 70, (100, 200, 255))
-    desenhar_texto('Pressione ESPAÇO para voltar ao menu', 30, largura//2 - 220, altura//2 + 150)
+    while not voltar:
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                return None
+            if evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_ESCAPE or evento.key == pygame.K_RETURN or evento.key == pygame.K_SPACE:
+                    voltar = True
+        
+        # Desenha o fundo
+        tela.fill(PRETO)
+        
+        # Desenha estrelas
+        for estrela in estrelas:
+            cor_estrela = (estrela[5], estrela[5], estrela[5])
+            pygame.draw.circle(tela, cor_estrela, (estrela[0], estrela[1]), estrela[2])
+            estrela[1] += estrela[3] * 0.5
+            if estrela[1] > altura:
+                estrela[1] = 0
+                estrela[0] = random.randint(0, largura)
+        
+        # Título
+        desenhar_texto('MELHORES PONTUAÇÕES', 48, largura//2 - 200, 50, (255, 215, 0))
+        
+        # Lista de pontuações
+        if not ranking:
+            desenhar_texto('Nenhuma pontuação registrada', 30, largura//2 - 150, 200)
+        else:
+            for i, (nome, pontos) in enumerate(ranking[:10]):  # Mostra apenas as 10 melhores
+                cor = (255, 255, 255) if i % 2 == 0 else (200, 200, 200)
+                desenhar_texto(f"{i+1}. {nome}", 30, largura//2 - 200, 150 + i * 35, cor)
+                desenhar_texto(f"{pontos}", 30, largura//2 + 150, 150 + i * 35, cor)
+        
+        # Instrução para voltar
+        desenhar_texto('Pressione ESPAÇO ou ENTER para voltar', 24, largura//2 - 200, altura - 50, (150, 150, 150))
+        
+        pygame.display.update()
+        relogio.tick(60)
     
-    pygame.display.update()
+    return MENU
 
 def jogo_principal():
     estado_jogo = MENU
@@ -312,9 +501,6 @@ def jogo_principal():
     # Loop principal
     rodando = True
     while rodando:
-        
-        
-        
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 rodando = False
@@ -328,38 +514,36 @@ def jogo_principal():
                     if evento.key == pygame.K_SPACE:
                         # Ao pressionar ESPAÇO no menu, vai para a tela de história
                         estado_jogo = HISTORIA
+                    if evento.key == pygame.K_r:
+                        estado_jogo = RANKING
                 
-                elif estado_jogo == GAME_OVER or estado_jogo == VITORIA:
-                    if evento.key == pygame.K_SPACE:
-                        # Se estiver na tela de vitória, volta para o menu inicial
-                        # Se estiver na tela de game over, recomeça o jogo
-                        if estado_jogo == VITORIA:
-                            estado_jogo = MENU
-                        else:  # GAME_OVER
-                            estado_jogo = JOGANDO
-                            
-                        # Reinicia todos os objetos do jogo
-                        jogador = Jogador()
-                        tiros = []
-                        inimigos = []
-                        asteroides = []
-                        explosoes = []
-                        powerups = []
-                        
-                        # Reinicia o boss e seus objetos relacionados
-                        boss = None
-                        boss_projeteis = []
-                        boss_derrotado = False
-                        
-                        # Cria inimigos iniciais
-                        for _ in range(5):
-                            inimigos.append(Inimigo())
-                        
-                        # Cria asteroides iniciais
-                        for _ in range(3):
-                            asteroides.append(Asteroide())
+                # O estado GAME_OVER é tratado na verificação principal de estados do jogo
+                # para evitar duplicação de código e garantir consistência
+                pass
         
         # Verifica estado do jogo
+        if estado_jogo == VITORIA:
+            # Exibe a tela de vitória e aguarda o jogador salvar seu nome
+            resultado = tela_vitoria(pontuacao_final)
+            if resultado == RANKING:
+                estado_jogo = RANKING
+            else:
+                # Reinicia o jogo para o menu principal
+                jogador = Jogador()
+                inimigos = [Inimigo() for _ in range(5)]
+                asteroides = [Asteroide() for _ in range(3)]
+                tiros = []
+                inimigos_projeteis = []
+                explosoes = []
+                powerups = []
+                boss = None
+                boss_projeteis = []
+                boss_derrotado = False
+                pontuacao_final = 0
+                tempo_ultimo_tiro = 0
+                estado_jogo = MENU
+            continue
+            
         if estado_jogo == MENU:
             # Atualiza posição das estrelas mesmo no menu
             atualizar_estrelas()
@@ -382,12 +566,35 @@ def jogo_principal():
         elif estado_jogo == GAME_OVER:
             # Atualiza posição das estrelas na tela de game over
             atualizar_estrelas()
-            tela_game_over(jogador.pontuacao)
+            resultado = tela_game_over(pontuacao_final)
+            if resultado is not None:
+                # Reinicia o jogo se voltar para o menu ou para o jogo
+                if resultado == JOGANDO or resultado == MENU:
+                    # Cria um novo jogador com 3 vidas
+                    jogador = Jogador()
+                    # Reseta todos os objetos do jogo
+                    inimigos = [Inimigo() for _ in range(5)]
+                    asteroides = [Asteroide() for _ in range(3)]
+                    tiros = []
+                    inimigos_projeteis = []
+                    explosoes = []
+                    powerups = []
+                    boss = None
+                    boss_projeteis = []
+                    boss_derrotado = False
+                    pontuacao_final = 0
+                    # Reseta o tempo do último tiro
+                    tempo_ultimo_tiro = 0
+                
+                # Muda para o estado desejado (JOGANDO ou MENU)
+                estado_jogo = resultado
             continue
-        
-        elif estado_jogo == VITORIA:
-            # A tela de vitória já tem seu próprio efeito de estrelas
-            tela_vitoria(jogador.pontuacao)
+            
+        elif estado_jogo == RANKING:
+            # Exibe a tela de ranking e aguarda o jogador voltar
+            resultado = tela_ranking()
+            if resultado is not None:
+                estado_jogo = resultado
             continue
         
         # Obtém teclas pressionadas
@@ -508,6 +715,12 @@ def jogo_principal():
                 explosoes.append(Explosao(inimigo.x + 20, inimigo.y + 20, 40))
                 explosion_sound.play()
                 
+                # Verifica se o jogador perdeu todas as vidas
+                if jogador.vidas <= 0:
+                    estado_jogo = GAME_OVER
+                    pontuacao_final = jogador.pontuacao
+                    break  # Sai do loop de colisões se o jogo acabou
+                
         # Verifica colisões entre jogador e projéteis dos inimigos
         for projetil in inimigos_projeteis[:]:
             if verificar_colisao(jogador.x + 25, jogador.y + 15, 15, 
@@ -518,6 +731,12 @@ def jogo_principal():
                 projetil.ativo = False
                 explosoes.append(Explosao(projetil.x, projetil.y, 30))
                 explosion_sound.play()
+                
+                # Verifica se o jogador perdeu todas as vidas
+                if jogador.vidas <= 0:
+                    estado_jogo = GAME_OVER
+                    pontuacao_final = jogador.pontuacao
+                    break  # Sai do loop de colisões se o jogo acabou
         
         # Verifica colisões jogador-asteroide
         for asteroide in asteroides[:]:
@@ -530,6 +749,12 @@ def jogo_principal():
                                        asteroide.y + asteroide.tamanho//2, 30))
                 explosion_sound.play()
                 asteroide.reposicionar()
+                
+                # Verifica se o jogador perdeu todas as vidas
+                if jogador.vidas <= 0:
+                    estado_jogo = GAME_OVER
+                    pontuacao_final = jogador.pontuacao
+                    break  # Sai do loop de colisões se o jogo acabou
         
         # Verifica colisões tiro-asteroide
         for tiro in tiros[:]:
@@ -589,6 +814,28 @@ def jogo_principal():
                     boss_projeteis.remove(projetil)
                     explosoes.append(Explosao(projetil.x, projetil.y, 15))
                     explosion_sound.play()
+                    
+                    # Verifica se o jogador perdeu todas as vidas
+                    if jogador.vidas <= 0:
+                        estado_jogo = GAME_OVER
+                        pontuacao_final = jogador.pontuacao
+                        break  # Sai do loop de colisões se o jogo acabou
+            
+            # Verifica colisão jogador-boss
+            if verificar_colisao(jogador.x + 25, jogador.y + 15, 15,
+                               boss.x + boss.tamanho//2,
+                               boss.y + boss.tamanho//2,
+                               boss.raio):
+                jogador.colidir()
+                explosoes.append(Explosao(boss.x + boss.tamanho//2,
+                                        boss.y + boss.tamanho//2, 50))
+                explosion_sound.play()
+                
+                # Verifica se o jogador perdeu todas as vidas
+                if jogador.vidas <= 0:
+                    estado_jogo = GAME_OVER
+                    pontuacao_final = jogador.pontuacao
+                    break  # Sai do loop de colisões se o jogo acabou
             
             # Verifica colisões tiro-boss
             for tiro in tiros[:]:
@@ -609,15 +856,15 @@ def jogo_principal():
                         pygame.time.delay(1000)  # Pausa por 1 segundo
                         
                         # Muda para a tela de vitória
+                        pontuacao_final = jogador.pontuacao
                         estado_jogo = VITORIA
+                        break  # Sai do loop de colisões para evitar processamento desnecessário
                     
                     explosoes.append(Explosao(tiro.x, tiro.y, 10))
                     if tiro in tiros:  # Verifica se o tiro ainda está na lista
                         tiros.remove(tiro)
                     
-        # Verifica game over
-        if jogador.vidas <= 0:
-            estado_jogo = GAME_OVER
+
         
         # Desenha o jogo
         tela.fill(PRETO)

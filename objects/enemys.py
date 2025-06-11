@@ -278,29 +278,46 @@ class Projetil:
 
 class Boss:
     def __init__(self):
-        self.tamanho = 100
-        self.img_original = pygame.Surface((self.tamanho, self.tamanho))
-        self.img_original.fill(PRETO)
+        # Tamanho desejado para o boss
+        self.tamanho = 120  # Tamanho base para redimensionamento
         
-        # Desenha o boss (uma nave maior e mais ameaçadora)
-        pygame.draw.polygon(self.img_original, (150, 0, 0), [
-            (self.tamanho//2, 0),  # Ponta
-            (0, self.tamanho),  # Canto inferior esquerdo
-            (self.tamanho//3, self.tamanho//1.5),  # Recorte esquerdo
-            (2*self.tamanho//3, self.tamanho//1.5),  # Recorte direito
-            (self.tamanho, self.tamanho)  # Canto inferior direito
-        ])
-        pygame.draw.circle(self.img_original, AZUL, (self.tamanho//2, self.tamanho//2), self.tamanho//4)
-        pygame.draw.circle(self.img_original, (255, 0, 0), (self.tamanho//2, self.tamanho//2), self.tamanho//6)
+        # Tenta carregar a imagem do boss
+        try:
+            # Carrega a imagem e redimensiona para o tamanho desejado
+            self.img_original = pygame.image.load('img/boss.png').convert_alpha()
+            # Redimensiona mantendo a proporção
+            largura_original = self.img_original.get_width()
+            altura_original = self.img_original.get_height()
+            proporcao = self.tamanho / max(largura_original, altura_original)
+            nova_largura = int(largura_original * proporcao)
+            nova_altura = int(altura_original * proporcao)
+            self.img_original = pygame.transform.scale(
+                self.img_original, 
+                (nova_largura, nova_altura)
+            )
+            # Inverte a imagem verticalmente se necessário (dependendo da orientação da imagem original)
+            self.img_original = pygame.transform.flip(self.img_original, False, True)
+        except Exception as e:
+            print(f"Erro ao carregar a imagem do boss: {e}")
+            # Se não conseguir carregar a imagem, cria um placeholder
+            self.img_original = pygame.Surface((self.tamanho, self.tamanho), pygame.SRCALPHA)
+            pygame.draw.polygon(self.img_original, (150, 0, 0), [
+                (self.tamanho//2, 0),  # Ponta
+                (0, self.tamanho),  # Canto inferior esquerdo
+                (self.tamanho//3, self.tamanho//1.5),  # Recorte esquerdo
+                (2*self.tamanho//3, self.tamanho//1.5),  # Recorte direito
+                (self.tamanho, self.tamanho)  # Canto inferior direito
+            ])
+            pygame.draw.circle(self.img_original, AZUL, (self.tamanho//2, self.tamanho//2), self.tamanho//4)
+            pygame.draw.circle(self.img_original, (255, 0, 0), (self.tamanho//2, self.tamanho//2), self.tamanho//6)
+            
+            # Adiciona detalhes
+            for _ in range(5):
+                pos_x = random.randint(self.tamanho//4, 3*self.tamanho//4)
+                pos_y = random.randint(self.tamanho//4, 3*self.tamanho//4)
+                raio = random.randint(3, 8)
+                pygame.draw.circle(self.img_original, VERMELHO, (pos_x, pos_y), raio)
         
-        # Adiciona detalhes
-        for _ in range(5):
-            pos_x = random.randint(self.tamanho//4, 3*self.tamanho//4)
-            pos_y = random.randint(self.tamanho//4, 3*self.tamanho//4)
-            raio = random.randint(3, 8)
-            pygame.draw.circle(self.img_original, VERMELHO, (pos_x, pos_y), raio)
-        
-        self.img_original.set_colorkey(PRETO)
         self.img = self.img_original
         
         # Posição inicial (centralizado no topo)
